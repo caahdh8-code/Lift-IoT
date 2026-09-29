@@ -2,80 +2,63 @@
 <html lang="ms">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Kawalan Lif IoT 2 Tingkat</title>
-    <!-- Firebase SDK -->
+    <title>Kawalan Lif IoT</title>
+    <!-- Firebase SDK v8 (Sesuai untuk Notepad & HTML biasa) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background-color: #f4f4f9; }
-        .card { background: white; padding: 30px; border-radius: 10px; display: inline-block; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); width: 320px; }
-        select, button { width: 100%; padding: 12px; font-size: 16px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
-        button { background-color: #28a745; color: white; cursor: pointer; font-weight: bold; }
-        button:hover { background-color: #218838; }
-        #statusMessage { font-weight: bold; margin-top: 20px; font-size: 16px; }
-    </style>
 </head>
-<body>
-
-    <div class="card">
-        <h2>Kawalan Lif IoT</h2>
+<body style="text-align: center; margin-top: 50px; font-family: Arial; background-color: #f4f4f9;">
+    <div style="background: white; padding: 30px; border-radius: 10px; display: inline-block; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); width: 320px;">
+        <h2>Kawalan Lif 2 Tingkat</h2>
         
-        <!-- Pilihan Current Floor -->
-        <label for="currentFloor" style="float: left; font-weight: bold;">Select Current Floor:</label>
-        <select id="currentFloor">
+        <label style="font-weight: bold; float: left;">Current Floor:</label>
+        <select id="currentFloor" style="width: 100%; padding: 10px; margin: 10px 0;">
             <option value="1">1</option>
             <option value="2">2</option>
         </select>
-        <br><br>
+        <br>
 
-        <!-- Pilihan Destination Floor -->
-        <label for="destFloor" style="float: left; font-weight: bold;">Select Destination Floor:</label>
-        <select id="destFloor">
+        <label style="font-weight: bold; float: left;">Destination Floor:</label>
+        <select id="destFloor" style="width: 100%; padding: 10px; margin: 10px 0;">
             <option value="1">1</option>
             <option value="2">2</option>
         </select>
-        <br><br>
+        <br>
 
-        <button onclick="hantarArahan()">Hantar Arahan</button>
-
-        <div id="statusMessage"></div>
+        <button onclick="hantar()" style="width: 100%; padding: 12px; background-color: #28a745; color: white; font-size: 16px; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">Hantar Arahan</button>
+        <p id="status" style="font-weight: bold; margin-top: 20px; font-size: 15px;"></p>
     </div>
 
     <script>
-        // Konfigurasi Firebase Anda
+        // Kunci Firebase Awak (Digabungkan dengan konfigurasi yang betul)
         const firebaseConfig = {
-            apiKey: "MASUKKAN_API_KEY_ANDA",
-            authDomain: "PROJEK_ANDA.firebaseapp.com",
-            databaseURL: "https://PROJEK_ANDA-default-rtdb.firebaseio.com",
-            projectId: "PROJEK_ANDA",
-            storageBucket: "PROJEK_ANDA.appspot.com",
-            messagingSenderId: "ID_ANDA",
-            appId: "APP_ID_ANDA"
+            apiKey: "AIzaSyCrizFZvWPncztn1DwKDA7N1ZOqXOwdSmY",
+            authDomain: "lift-iot-project.firebaseapp.com",
+            databaseURL: "https://lift-iot-project-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "lift-iot-project",
+            storageBucket: "lift-iot-project.firebasestorage.app",
+            messagingSenderId: "839618051551",
+            appId: "1:839618051551:web:7e5376538f1d53074dd86a"
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        function hantarArahan() {
-            let current = document.getElementById("currentFloor").value;
-            let dest = document.getElementById("destFloor").value;
-            let msgBox = document.getElementById("statusMessage");
+        function hantar() {
+            let c = document.getElementById("currentFloor").value;
+            let d = document.getElementById("destFloor").value;
+            let msg = document.getElementById("status");
 
-            // Logik Semakan Tingkat
-            if (current === dest) {
-                msgBox.style.color = "red";
-                msgBox.innerHTML = "You are already in this floor!";
+            if (c === d) {
+                msg.style.color = "red";
+                msg.innerHTML = "You are already in this floor!";
             } else {
-                msgBox.style.color = "green";
-                msgBox.innerHTML = "Wait for lift, moving to floor " + dest + "...";
-
-                // Hantar data ke Firebase untuk dibaca oleh ESP32
-                db.ref('lift/currentFloor').set(current);
-                db.ref('lift/destinationFloor').set(dest);
+                msg.style.color = "green";
+                msg.innerHTML = "Wait for lift, moving to floor " + d + "...";
+                db.ref('lift/currentFloor').set(c);
+                db.ref('lift/destinationFloor').set(d);
                 db.ref('lift/command').set("MOVE");
             }
         }
     </script>
-
 </body>
 </html>
