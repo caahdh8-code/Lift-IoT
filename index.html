@@ -2,63 +2,182 @@
 <html lang="ms">
 <head>
     <meta charset="UTF-8">
-    <title>Kawalan Lif IoT</title>
-    <!-- Firebase SDK v8 (Sesuai untuk Notepad & HTML biasa) -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kawalan Lif Pintar IoT</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 450px;
+            box-sizing: border-box;
+        }
+        h2 {
+            text-align: center;
+            color: #333333;
+            margin-bottom: 25px;
+            font-size: 26px;
+            font-weight: 600;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #555555;
+            font-size: 15px;
+        }
+        .display-box {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 18px;
+            background-color: #fafafa;
+            color: #2c3e50;
+            font-weight: bold;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 16px;
+            background-color: #ffffff;
+            cursor: pointer;
+            outline: none;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+        select:focus {
+            border-color: #27ae60;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #219653;
+        }
+        .status-msg {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .success { color: #27ae60; }
+        .error { color: #c0392b; }
+    </style>
 </head>
-<body style="text-align: center; margin-top: 50px; font-family: Arial; background-color: #f4f4f9;">
-    <div style="background: white; padding: 30px; border-radius: 10px; display: inline-block; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); width: 320px;">
-        <h2>Kawalan Lif 2 Tingkat</h2>
-        
-        <label style="font-weight: bold; float: left;">Current Floor:</label>
-        <select id="currentFloor" style="width: 100%; padding: 10px; margin: 10px 0;">
-            <option value="1">1</option>
-            <option value="2">2</option>
-        </select>
-        <br>
+<body>
 
-        <label style="font-weight: bold; float: left;">Destination Floor:</label>
-        <select id="destFloor" style="width: 100%; padding: 10px; margin: 10px 0;">
-            <option value="1">1</option>
-            <option value="2">2</option>
-        </select>
-        <br>
+<div class="container">
+    <h2>Kawalan Lif 3 Tingkat</h2>
 
-        <button onclick="hantar()" style="width: 100%; padding: 12px; background-color: #28a745; color: white; font-size: 16px; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">Hantar Arahan</button>
-        <p id="status" style="font-weight: bold; margin-top: 20px; font-size: 15px;"></p>
+    <!-- PAPARAN STATUS TINGKAT SEMASA (LIVE DARI PLC) -->
+    <div class="form-group">
+        <label>Current Floor (Tingkat Semasa):</label>
+        <div id="currentFloorDisplay" class="display-box">Menghubungkan...</div>
     </div>
 
-    <script>
-        // Kunci Firebase Awak (Digabungkan dengan konfigurasi yang betul)
-        const firebaseConfig = {
-            apiKey: "AIzaSyCrizFZvWPncztn1DwKDA7N1ZOqXOwdSmY",
-            authDomain: "lift-iot-project.firebaseapp.com",
-            databaseURL: "https://lift-iot-project-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "lift-iot-project",
-            storageBucket: "lift-iot-project.firebasestorage.app",
-            messagingSenderId: "839618051551",
-            appId: "1:839618051551:web:7e5376538f1d53074dd86a"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+    <!-- PEMILIHAN DESTINASI OLEH PENGGUNA -->
+    <div class="form-group">
+        <label>Destination Floor (Destinasi):</label>
+        <select id="destinationSelect">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+        </select>
+    </div>
 
-        function hantar() {
-            let c = document.getElementById("currentFloor").value;
-            let d = document.getElementById("destFloor").value;
-            let msg = document.getElementById("status");
+    <button onclick="hantarArahan()">Hantar Arahan</button>
+    <div id="statusMessage" class="status-msg"></div>
+</div>
 
-            if (c === d) {
-                msg.style.color = "red";
-                msg.innerHTML = "You are already in this floor!";
+<script>
+    // Pautan rasmi Firebase & Secret Token daripada projek FYP awak
+    const FIREBASE_URL = "https://firebasedatabase.app";
+    const FIREBASE_AUTH = "IsP8TU5blWhYbEqjIq32U5RKHnAs4bPKm0aHXDn8";
+
+    // 📥 1. FUNGSI BACA DATA LIVE (Kemas kini automatik tanpa refresh web)
+    function dapatkanStatusSemasa() {
+        const fullURL = `${FIREBASE_URL}/command/currentFloor.json?auth=${FIREBASE_AUTH}`;
+
+        fetch(fullURL)
+        .then(response => response.json())
+        .then(data => {
+            if (data !== null) {
+                document.getElementById("currentFloorDisplay").innerText = data;
             } else {
-                msg.style.color = "green";
-                msg.innerHTML = "Wait for lift, moving to floor " + d + "...";
-                db.ref('lift/currentFloor').set(c);
-                db.ref('lift/destinationFloor').set(d);
-                db.ref('lift/command').set("MOVE");
+                document.getElementById("currentFloorDisplay").innerText = "-";
             }
-        }
-    </script>
+        })
+        .catch(error => {
+            console.error("Ralat ambil data:", error);
+            document.getElementById("currentFloorDisplay").innerText = "Ralat Rangkaian";
+        });
+    }
+
+    // Semak database setiap 1 saat secara automatik (Real-time update)
+    setInterval(dapatkanStatusSemasa, 1000);
+    dapatkanStatusSemasa(); 
+
+    // 📤 2. FUNGSI HANTAR ARAHAN TINGKAT KE FIREBASE
+    function hantarArahan() {
+        const selectedFloor = parseInt(document.getElementById("destinationSelect").value);
+        const fullURL = `${FIREBASE_URL}/command/destinationFloor.json?auth=${FIREBASE_AUTH}`;
+        const statusBox = document.getElementById("statusMessage");
+
+        statusBox.className = "status-msg";
+        statusBox.innerText = "Sedang menghantar arahan...";
+
+        fetch(fullURL, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(selectedFloor)
+        })
+        .then(response => {
+            if (response.ok) {
+                statusBox.className = "status-msg success";
+                statusBox.innerText = `✔️ Sukses! Lif diarahkan ke Tingkat ${selectedFloor}`;
+            } else {
+                statusBox.className = "status-msg error";
+                statusBox.innerText = `❌ Gagal. Kod Ralat HTTP: ${response.status}`;
+            }
+        })
+        .catch(error => {
+            console.error("Ralat Firebase:", error);
+            statusBox.className = "status-msg error";
+            statusBox.innerText = "❌ Tiada internet / Firebase tersekat.";
+        });
+    }
+</script>
+
 </body>
 </html>
