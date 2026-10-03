@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Lif Pintar Tanpa Sentuh</title>
+    <title>Sistem Kawalan Lif IoT Contactless</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -15,7 +15,7 @@
             margin: 0;
             color: #ffffff;
         }
-        .elevator-panel {
+        .elevator-container {
             background-color: #1e293b;
             padding: 35px;
             border-radius: 24px;
@@ -29,8 +29,8 @@
             text-align: center;
             margin-top: 0;
             margin-bottom: 25px;
-            font-size: 22px;
-            letter-spacing: 1px;
+            font-size: 20px;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
             color: #cbd5e1;
             border-bottom: 2px solid #334155;
@@ -53,27 +53,27 @@
             margin-bottom: 5px;
         }
         .floor-number {
-            font-size: 48px;
+            font-size: 52px;
             font-weight: bold;
             color: #f59e0b;
             font-family: 'Courier New', Courier, monospace;
             text-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
             line-height: 1;
         }
-        .button-container {
+        .button-layout {
             display: flex;
             flex-direction: column;
             gap: 15px;
             align-items: center;
         }
         .lift-btn {
-            width: 80px;
-            height: 80px;
+            width: 85px;
+            height: 85px;
             border-radius: 50%;
             background: linear-gradient(145deg, #334155, #1e293b);
             border: 3px solid #475569;
             color: #cbd5e1;
-            font-size: 28px;
+            font-size: 30px;
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 6px 12px rgba(0,0,0,0.3);
@@ -91,12 +91,12 @@
             transform: translateY(2px);
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
-        /* Apabila butang aktif di Firebase / diarahkan */
+        /* Efek Lampu Butang Menyala Apabila Diaktifkan */
         .lift-btn.active-target {
-            background: linear-gradient(145deg, #22c55e, #15803d);
-            border-color: #4ade80;
-            color: #ffffff;
-            box-shadow: 0 0 20px rgba(34, 197, 94, 0.6);
+            background: linear-gradient(145deg, #22c55e, #15803d) !important;
+            border-color: #4ade80 !important;
+            color: #ffffff !important;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.7) !important;
             text-shadow: 0 0 8px rgba(255,255,255,0.8);
         }
         .status-bar {
@@ -110,85 +110,92 @@
 </head>
 <body>
 
-<div class="elevator-panel">
+<div class="elevator-container">
     <h2>Smart Lift Panel</h2>
 
-    <!-- SCREEN PAPARAN TINGKAT SEMASA LIVE DARI PLC -->
+    <!-- SCREEN PAPARAN DIGITAL KEDUDUKAN LIF SEKARANG -->
     <div class="display-screen">
         <div class="display-label">Tingkat Semasa</div>
         <div id="liveFloor" class="floor-number">--</div>
     </div>
 
-    <!-- PANEL PUSH BUTTON REALISTIK (TINGKAT 3, 2, 1) -->
-    <div class="button-container">
+    <!-- UTILITIES BUTTONS DENGAN DESIGN BULAT PREMIUM -->
+    <div class="button-layout">
         <button class="lift-btn" id="btn-3" onclick="pilihTingkat(3)">3</button>
         <button class="lift-btn" id="btn-2" onclick="pilihTingkat(2)">2</button>
         <button class="lift-btn" id="btn-1" onclick="pilihTingkat(1)">1</button>
     </div>
 
-    <div id="networkStatus" class="status-bar">Menghubungkan ke IoT Server...</div>
+    <div id="networkStatus" class="status-bar">Menghubungkan ke Secure Server...</div>
 </div>
 
-<!-- LOAD SDK FIREBASE MODEN SECARA KILAT -->
-<script type="module">
-    import { initializeApp } from "https://gstatic.com";
-    import { getDatabase, ref, onValue, set } from "https://gstatic.com";
-
-    // Konfigurasi khusus Realtime Database FYP anda
-    const firebaseConfig = {
-        databaseURL: "https://firebasedatabase.app"
-    };
-
-    // Memulakan Firebase App & Database Connection
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+<script>
+    // Konfigurasi Kredensial Penuh mengikut Kunci Rahsia Keselamatan Asal fail Firebase anda
+    const FIREBASE_URL = "https://firebasedatabase.app";
+    const FIREBASE_AUTH = "IsP8TU5blWhYbEqjIq32U5RKHnAs4bPKm0aHXDn8";
 
     const liveFloorDisplay = document.getElementById("liveFloor");
     const statusText = document.getElementById("networkStatus");
 
-    // 📥 1. MENDENGAR DATA SECARA LIVE (Real-time Stream Tanpa CORS Error)
-    // Membaca nod /command/currentFloor secara live
-    const currentFloorRef = ref(db, 'command/currentFloor');
-    onValue(currentFloorRef, (snapshot) => {
-        const value = snapshot.val();
-        if (value !== null) {
-            liveFloorDisplay.innerText = value;
-            statusText.innerText = "Sistem Beroperasi Lancar";
-        } else {
-            liveFloorDisplay.innerText = "--";
-        }
-    }, (error) => {
-        statusText.innerText = "Ralat Talian Database";
-        console.error(error);
-    });
-
-    // Membaca nod /command/destinationFloor untuk memberikan efek lampu butang menyala
-    const destFloorRef = ref(db, 'command/destinationFloor');
-    onValue(destFloorRef, (snapshot) => {
-        const targetFloor = snapshot.val();
-        // Reset warna semua butang dahulu
-        for(let i=1; i<=3; i++) {
-            document.getElementById(`btn-${i}`).classList.remove("active-target");
-        }
-        // Nyalakan lampu hijau pada butang tingkat yang dituju
-        if (targetFloor >= 1 && targetFloor <= 3) {
-            document.getElementById(`btn-${targetFloor}`).classList.add("active-target");
-        }
-    });
-
-    // 📤 2. FUNGSI HANTAR ARAHAN HANYA DENGAN KLIK BUTANG LIF
-    window.pilihTingkat = function(floorNumber) {
-        statusText.innerText = `Mengarah lif ke Tingkat ${floorNumber}...`;
-        const targetRef = ref(db, 'command/destinationFloor');
-        
-        // Menulis integer ke Firebase Database
-        set(targetRef, floorNumber)
-        .then(() => {
-            statusText.innerText = `✔️ Sukses! Isyarat Tingkat ${floorNumber} dihantar.`;
+    // 📥 1. FUNGSI AMBIL DATA LIVE (Menggunakan Token Keselamatan Rahsia tanpa CORS Error)
+    function ambilDataMasaNyata() {
+        // Ambil data currentFloor (Tingkat Semasa)
+        const currentUrl = `${FIREBASE_URL}/command/currentFloor.json?auth=${FIREBASE_AUTH}`;
+        fetch(currentUrl)
+        .then(response => response.json())
+        .then(data => {
+            if (data !== null) {
+                liveFloorDisplay.innerText = data;
+                statusText.innerText = "Sistem Beroperasi Lancar";
+            }
         })
-        .catch((error) => {
-            statusText.innerText = "❌ Gagal hantar arahan.";
+        .catch(err => {
+            console.error(err);
+            statusText.innerText = "Gangguan Isyarat Rangkaian";
+        });
+
+        // Ambil data destinationFloor untuk menyalakan lampu hijau LED pada butang
+        const destUrl = `${FIREBASE_URL}/command/destinationFloor.json?auth=${FIREBASE_AUTH}`;
+        fetch(destUrl)
+        .then(response => response.json())
+        .then(targetFloor => {
+            // Reset semua butang ke warna asal
+            for(let i=1; i<=3; i++) {
+                document.getElementById(`btn-${i}`).classList.remove("active-target");
+            }
+            // Nyalakan lampu butang yang sedang aktif diarahkan
+            if (targetFloor >= 1 && targetFloor <= 3) {
+                document.getElementById(`btn-${targetFloor}`).classList.add("active-target");
+            }
+        });
+    }
+
+    // Semak pangkalan data setiap 1 saat secara berterusan (Real-time update loop)
+    setInterval(ambilDataMasaNyata, 1000);
+    ambilDataMasaNyata();
+
+    // 📤 2. FUNGSI ENGKAPSULASI HANTAR ARAHAN TINGKAT (Menggunakan Token Rahsia)
+    function pilihTingkat(floorNumber) {
+        statusText.innerText = `Mengarah lif ke Tingkat ${floorNumber}...`;
+        const fullURL = `${FIREBASE_URL}/command/destinationFloor.json?auth=${FIREBASE_AUTH}`;
+
+        fetch(fullURL, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(floorNumber)
+        })
+        .then(response => {
+            if (response.ok) {
+                statusText.innerText = `✔️ Sukses! Isyarat Tingkat ${floorNumber} dihantar.`;
+            } else {
+                statusText.innerText = `❌ Kegagalan Token Pengesahan Server.`;
+            }
+        })
+        .catch(error => {
             console.error(error);
+            statusText.innerText = "❌ Tiada capaian internet.";
         });
     }
 </script>
