@@ -91,7 +91,6 @@
             transform: translateY(2px);
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
-        /* Efek Lampu Butang Menyala Apabila Diaktifkan */
         .lift-btn.active-target {
             background: linear-gradient(145deg, #22c55e, #15803d) !important;
             border-color: #4ade80 !important;
@@ -119,7 +118,7 @@
         <div id="liveFloor" class="floor-number">--</div>
     </div>
 
-    <!-- UTILITIES BUTTONS DENGAN DESIGN BULAT PREMIUM -->
+    <!-- PANEL BUTANG LIF BULAT PREMIUM -->
     <div class="button-layout">
         <button class="lift-btn" id="btn-3" onclick="pilihTingkat(3)">3</button>
         <button class="lift-btn" id="btn-2" onclick="pilihTingkat(2)">2</button>
@@ -130,16 +129,13 @@
 </div>
 
 <script>
-    // Konfigurasi Kredensial Penuh mengikut Kunci Rahsia Keselamatan Asal fail Firebase anda
     const FIREBASE_URL = "https://firebasedatabase.app";
     const FIREBASE_AUTH = "IsP8TU5blWhYbEqjIq32U5RKHnAs4bPKm0aHXDn8";
 
     const liveFloorDisplay = document.getElementById("liveFloor");
     const statusText = document.getElementById("networkStatus");
 
-    // 📥 1. FUNGSI AMBIL DATA LIVE (Menggunakan Token Keselamatan Rahsia tanpa CORS Error)
     function ambilDataMasaNyata() {
-        // Ambil data currentFloor (Tingkat Semasa)
         const currentUrl = `${FIREBASE_URL}/command/currentFloor.json?auth=${FIREBASE_AUTH}`;
         fetch(currentUrl)
         .then(response => response.json())
@@ -154,27 +150,22 @@
             statusText.innerText = "Gangguan Isyarat Rangkaian";
         });
 
-        // Ambil data destinationFloor untuk menyalakan lampu hijau LED pada butang
         const destUrl = `${FIREBASE_URL}/command/destinationFloor.json?auth=${FIREBASE_AUTH}`;
         fetch(destUrl)
         .then(response => response.json())
         .then(targetFloor => {
-            // Reset semua butang ke warna asal
             for(let i=1; i<=3; i++) {
                 document.getElementById(`btn-${i}`).classList.remove("active-target");
             }
-            // Nyalakan lampu butang yang sedang aktif diarahkan
             if (targetFloor >= 1 && targetFloor <= 3) {
                 document.getElementById(`btn-${targetFloor}`).classList.add("active-target");
             }
         });
     }
 
-    // Semak pangkalan data setiap 1 saat secara berterusan (Real-time update loop)
     setInterval(ambilDataMasaNyata, 1000);
     ambilDataMasaNyata();
 
-    // 📤 2. FUNGSI ENGKAPSULASI HANTAR ARAHAN TINGKAT (Menggunakan Token Rahsia)
     function pilihTingkat(floorNumber) {
         statusText.innerText = `Mengarah lif ke Tingkat ${floorNumber}...`;
         const fullURL = `${FIREBASE_URL}/command/destinationFloor.json?auth=${FIREBASE_AUTH}`;
