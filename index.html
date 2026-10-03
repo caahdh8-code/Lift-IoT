@@ -135,37 +135,59 @@
     const liveFloorDisplay = document.getElementById("liveFloor");
     const statusText = document.getElementById("networkStatus");
 
-    function ambilDataMasaNyata() {
-        const currentUrl = `${FIREBASE_URL}/command/currentFloor.json?auth=${FIREBASE_AUTH}`;
-        fetch(currentUrl)
-        .then(response => response.json())
-        .then(data => {
-            if (data !== null) {
-                liveFloorDisplay.innerText = data;
-                statusText.innerText = "Sistem Beroperasi Lancar";
+    // Menggunakan EventSource (SSE) REST API untuk memintas sekatan CORS browser komputer secara total
+    let eventSource = null;
+
+    function mulakanStreamMasaNyata() {
+        const streamUrl = `${FIREBASE_URL}/command.json?auth=${FIREBASE_AUTH}`;
+        
+        if (eventSource) {
+            eventSource.close();
+        }
+
+        eventSource = new EventSource(streamUrl);
+
+        eventSource.addEventListener('put', function(e) {
+            const responseData = JSON.parse(e.data);
+            statusText.innerText = "Sistem Beroperasi Lancar";
+            
+            if (responseData && responseData.data) {
+                const path = responseData.path;
+                const data = responseData.data;
+
+                // Jika folder induk /command dikemas kini sepenuhnya
+                if (path === "/") {
+                    if (data.currentFloor !== undefined) liveFloorDisplay.innerText = data.currentFloor;
+                    if (data.destinationFloor !== undefined) nyalakanLampuButang(data.destinationFloor);
+                } 
+                // Jika hanya individu nod berubah
+                else if (path === "/currentFloor") {
+                    liveFloorDisplay.innerText = data;
+                } else if (path === "/destinationFloor") {
+                    nyalakanLampuButang(data);
+                }
             }
-        })
-        .catch(err => {
-            console.error(err);
-            statusText.innerText = "Gangguan Isyarat Rangkaian";
         });
 
-        const destUrl = `${FIREBASE_URL}/command/destinationFloor.json?auth=${FIREBASE_AUTH}`;
-        fetch(destUrl)
-        .then(response => response.json())
-        .then(targetFloor => {
-            for(let i=1; i<=3; i++) {
-                document.getElementById(`btn-${i}`).classList.remove("active-target");
-            }
-            if (targetFloor >= 1 && targetFloor <= 3) {
-                document.getElementById(`btn-${targetFloor}`).classList.add("active-target");
-            }
-        });
+        eventSource.onerror = function(err) {
+            console.error("EventSource gagal, mencuba semula...", err);
+            statusText.innerText = "Menghubungkan Semula...";
+        };
     }
 
-    setInterval(ambilDataMasaNyata, 1000);
-    ambilDataMasaNyata();
+    function nyalakanLampuButang(targetFloor) {
+        for(let i=1; i<=3; i++) {
+            document.getElementById(`btn-${i}`).classList.remove("active-target");
+        }
+        if (targetFloor >= 1 && targetFloor <= 3) {
+            document.getElementById(`btn-${targetFloor}`).classList.add("active-target");
+        }
+    }
 
+    // Mulakan pendengaran data
+    mulakanStreamMasaNyata();
+
+    // FUNGSI UTAMA HANTAR ARAHAN TINGKAT (Menggunakan Token Rahsia Asal)
     function pilihTingkat(floorNumber) {
         statusText.innerText = `Mengarah lif ke Tingkat ${floorNumber}...`;
         const fullURL = `${FIREBASE_URL}/command/destinationFloor.json?auth=${FIREBASE_AUTH}`;
@@ -181,7 +203,7 @@
             if (response.ok) {
                 statusText.innerText = `✔️ Sukses! Isyarat Tingkat ${floorNumber} dihantar.`;
             } else {
-                statusText.innerText = `❌ Kegagalan Token Pengesahan Server.`;
+                statusText.innerText = `❌ Kegagalan Kredensial Server.`;
             }
         })
         .catch(error => {
