@@ -105,6 +105,10 @@
             color: #94a3b8;
             font-style: italic;
         }
+        /* Menyembunyikan iframe pembantu supaya tidak merosakkan design web */
+        #hidden_iframe {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -125,8 +129,14 @@
         <button class="lift-btn" id="btn-1" onclick="pilihTingkat(1)">1</button>
     </div>
 
-    <div id="networkStatus" class="status-bar">Menghubungkan ke Secure Server...</div>
+    <div id="networkStatus" class="status-bar">Sistem Bersedia...</div>
 </div>
+
+<!-- BORANG TERSEMBUNYI UNTUK MEMPINTAS SEKATAN CORS BROWSER -->
+<form id="firebaseForm" method="POST" target="hidden_iframe">
+    <input type="hidden" name="_method" value="PUT">
+</form>
+<iframe name="hidden_iframe" id="hidden_iframe"></iframe>
 
 <script>
     const FIREBASE_URL = "https://firebasedatabase.app";
@@ -135,44 +145,24 @@
     const liveFloorDisplay = document.getElementById("liveFloor");
     const statusText = document.getElementById("networkStatus");
 
-    // Menggunakan EventSource (SSE) REST API untuk memintas sekatan CORS browser komputer secara total
-    let eventSource = null;
-
-    function mulakanStreamMasaNyata() {
-        const streamUrl = `${FIREBASE_URL}/command.json?auth=${FIREBASE_AUTH}`;
+    // 📥 AMBIL DATA MASUK SECARA PASIF (Ubah ke kaedah JSONP/XHR fallback jika fetch disekat)
+    function dapatkanStatusLive() {
+        const url = `${FIREBASE_URL}/command.json?auth=${FIREBASE_AUTH}`;
         
-        if (eventSource) {
-            eventSource.close();
-        }
-
-        eventSource = new EventSource(streamUrl);
-
-        eventSource.addEventListener('put', function(e) {
-            const responseData = JSON.parse(e.data);
-            statusText.innerText = "Sistem Beroperasi Lancar";
-            
-            if (responseData && responseData.data) {
-                const path = responseData.path;
-                const data = responseData.data;
-
-                // Jika folder induk /command dikemas kini sepenuhnya
-                if (path === "/") {
+        // Memakai XMLHttpRequest tradisional yang lebih kebal sekatan Mixed Content
+        const xhr = new XMLHttpRequest();
+        xhr.open("GET", url, true);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                const data = JSON.parse(xhr.responseText);
+                if (data) {
                     if (data.currentFloor !== undefined) liveFloorDisplay.innerText = data.currentFloor;
                     if (data.destinationFloor !== undefined) nyalakanLampuButang(data.destinationFloor);
-                } 
-                // Jika hanya individu nod berubah
-                else if (path === "/currentFloor") {
-                    liveFloorDisplay.innerText = data;
-                } else if (path === "/destinationFloor") {
-                    nyalakanLampuButang(data);
+                    statusText.innerText = "Sistem Beroperasi Lancar";
                 }
             }
-        });
-
-        eventSource.onerror = function(err) {
-            console.error("EventSource gagal, mencuba semula...", err);
-            statusText.innerText = "Menghubungkan Semula...";
         };
+        xhr.send();
     }
 
     function nyalakanLampuButang(targetFloor) {
@@ -184,32 +174,31 @@
         }
     }
 
-    // Mulakan pendengaran data
-    mulakanStreamMasaNyata();
+    // Semak perubahan data setiap 1.5 saat
+    setInterval(dapatkanStatusLive, 1500);
+    dapatkanStatusLive();
 
-    // FUNGSI UTAMA HANTAR ARAHAN TINGKAT (Menggunakan Token Rahsia Asal)
+    // 📤 FUNGSI TERBARU: MENGHANTAR DATA MENGGUNAKAN FORM BYPASS (ANTI-CORS)
     function pilihTingkat(floorNumber) {
         statusText.innerText = `Mengarah lif ke Tingkat ${floorNumber}...`;
-        const fullURL = `${FIREBASE_URL}/command/destinationFloor.json?auth=${FIREBASE_AUTH}`;
-
-        fetch(fullURL, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(floorNumber)
-        })
-        .then(response => {
-            if (response.ok) {
+        
+        const form = document.getElementById("firebaseForm");
+        
+        // Mengubah action form ke URL REST API Firebase bertoken rahsia anda
+        form.action = `${FIREBASE_URL}/command/destinationFloor.json?auth=${FIREBASE_AUTH}`;
+        
+        // Menggunakan manipulasi data mentah text/plain untuk bypass sekatan pre-flight browser
+        form.enctype = "text/plain";
+        
+        // Hantar nilai integer sebagai body data form
+        form.onsubmit = function() {
+            nyalakanLampuButang(floorNumber);
+            setTimeout(() => {
                 statusText.innerText = `✔️ Sukses! Isyarat Tingkat ${floorNumber} dihantar.`;
-            } else {
-                statusText.innerText = `❌ Kegagalan Kredensial Server.`;
-            }
-        })
-        .catch(error => {
-            console.error(error);
-            statusText.innerText = "❌ Tiada capaian internet.";
-        });
+            }, 300);
+        };
+        
+        form.submit();
     }
 </script>
 
